@@ -1,85 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <title>Full-Screen Responsive Image Slider</title>
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css' />
-  <style>
-    @import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap");
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<title>📸 相册集</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap");
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: "Lexend", sans-serif;
-      background-color: #362a2b;
-      color: #e5ebf3;
-    }
+  body {
+    font-family: "Lexend", sans-serif;
+    background: #ffffff; /* Notion default */
+    color: #2c2c2c;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+  }
 
-    .slider {
-      position: relative;
-      width: 100vw;
-      height: 100dvh; /* better on mobile than 100vh */
-      overflow: hidden;
-      background: #000; /* neutral backdrop behind different aspect ratios */
-    }
+  h2 {
+    text-align: center;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
 
-    .slide {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.4s ease-in-out;
-      display: flex;                 /* center the image */
-      align-items: center;
-      justify-content: center;
-      padding: 0;                    /* no padding so image can maximize space */
-    }
+  /* --- Matte Earth Frame --- */
+  .photo-frame {
+    background: linear-gradient(145deg, #3b2b1d, #4a3826, #5a4530, #3b2b1d);
+    border: 8px solid #2a1d14;
+    border-radius: 14px;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.4),
+      inset 0 0 12px rgba(255, 255, 255, 0.15);
+    padding: 10px;
+    display: inline-block;
+  }
 
-    .slide.current { opacity: 1; }
+  /* --- Slider --- */
+  .slider {
+    position: relative;
+    width: 70vw;
+    height: 80vh;
+    overflow: hidden;
+    background: #000;
+    border-radius: 8px;
+  }
 
-    .slide img {
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
-      object-fit: contain; /* preserve aspect and avoid cropping */
-      display: block;
-      user-select: none;
-      -webkit-user-drag: none;
-    }
+  .slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 
-    .buttons button#prev { position: absolute; top: 50%; left: 1rem; transform: translateY(-50%); }
-    .buttons button#next { position: absolute; top: 50%; right: 1rem; transform: translateY(-50%); }
+  .slide.current { opacity: 1; }
 
-    .buttons button {
-      border: 2px solid #e5ebf3;
-      background-color: transparent;
-      color: #e5ebf3;
-      cursor: pointer;
-      padding: 13px 15px;
-      border-radius: 50%;
-      outline: none;
-    }
-    .buttons button:hover { background-color: #e5ebf3; color: #362a2b; }
-  </style>
+  .slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* --- Buttons --- */
+  .buttons button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 2px solid #fff;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    cursor: pointer;
+    padding: 13px 15px;
+    border-radius: 50%;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  .buttons button:hover {
+    background-color: #fff;
+    color: #000;
+  }
+
+  #prev { left: 1rem; }
+  #next { right: 1rem; }
+
+  @media (max-width: 768px) {
+    .slider { width: 90vw; height: 70vh; }
+    .photo-frame { border-width: 6px; }
+  }
+</style>
 </head>
 <body>
-  <div class="slider" aria-live="polite">
-    <div class="slide current">
-      <img src="1.jpg" alt="Slide 1" />
-    </div>
-    <div class="slide">
-      <img src="2.jpg" alt="Slide 2" />
-    </div>
-    <div class="slide">
-      <img src="3.jpg" alt="Slide 3" />
-    </div>
-    <div class="slide">
-      <img src="4.jpg" alt="Slide 4" />
-    </div>
-  </div>
 
-  <div class="buttons">
-    <button id="prev" aria-label="Previous slide"><i class="fas fa-arrow-left"></i></button>
-    <button id="next" aria-label="Next slide"><i class="fas fa-arrow-right"></i></button>
+  <div>
+    <div class="photo-frame">
+      <div class="slider">
+        <div class="slide current"><img src="1.jpg" alt="Slide 1"></div>
+        <div class="slide"><img src="2.jpg" alt="Slide 2"></div>
+        <div class="slide"><img src="3.jpg" alt="Slide 3"></div>
+        <div class="slide"><img src="4.jpg" alt="Slide 4"></div>
+
+        <div class="buttons">
+          <button id="prev"><i class="fas fa-arrow-left"></i></button>
+          <button id="next"><i class="fas fa-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -90,7 +122,7 @@
     const intervalTime = 5000;
     let slideInterval;
 
-    const nextSlide = () => {
+    function nextSlide() {
       const current = document.querySelector(".current");
       current.classList.remove("current");
       if (current.nextElementSibling) {
@@ -98,9 +130,9 @@
       } else {
         slides[0].classList.add("current");
       }
-    };
+    }
 
-    const prevSlide = () => {
+    function prevSlide() {
       const current = document.querySelector(".current");
       current.classList.remove("current");
       if (current.previousElementSibling) {
@@ -108,7 +140,7 @@
       } else {
         slides[slides.length - 1].classList.add("current");
       }
-    };
+    }
 
     nextButton.addEventListener("click", () => {
       nextSlide();
