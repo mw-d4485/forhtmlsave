@@ -5,42 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>📸 相册集</title>
   <style>
+    /* =============== GLOBAL RESET =============== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+
+    /* =============== SCOPED WIDGET =============== */
+    .notion-widget-root {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      background: #ffffff;
-      color: #2c2c2c;
-      min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      min-height: 100vh;
       padding: 16px;
+      background: #ffffff; /* default Notion background */
+      color: #2c2c2c;
     }
-    h2 { text-align: center; margin-bottom: 12px; font-weight: 600; }
 
-    /* Earth-toned (wood-like) matte frame – CSS only */
-    .photo-frame {
-      background: linear-gradient(145deg, #3b2b1d, #4a3826 35%, #5b4631 65%, #3a2b1e);
-      border: 10px solid #271b13;
+    .notion-widget-root h2 {
+      text-align: center;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    /* --- Earth-toned frame --- */
+    .notion-widget-root .photo-frame {
+      background: linear-gradient(145deg,#3b2b1d,#4a3826 35%,#5b4631 65%,#3a2b1e);
+      border: 12px solid #271b13;
       border-radius: 14px;
-      box-shadow:
-        0 8px 22px rgba(0,0,0,0.35),
-        inset 0 0 14px rgba(255,255,255,0.12);
+      box-shadow: 0 8px 22px rgba(0,0,0,.35), inset 0 0 14px rgba(255,255,255,.12);
       padding: 10px;
       display: inline-block;
       max-width: 95vw;
     }
 
-    .slider {
+    .notion-widget-root .slider {
       position: relative;
       width: min(100vw - 48px, 980px);
       height: min(80vh, 720px);
       background: #000;
       border-radius: 8px;
       overflow: hidden;
+      z-index: 1;
     }
 
-    .slide {
+    .notion-widget-root .slide {
       position: absolute;
       inset: 0;
       opacity: 0;
@@ -49,25 +57,28 @@
       align-items: center;
       justify-content: center;
     }
-    .slide.current { opacity: 1; }
 
-    .slide img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+    .notion-widget-root .slide.current { opacity: 1; }
+
+    .notion-widget-root .slide img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
       display: block;
       user-select: none;
       -webkit-user-drag: none;
     }
 
-    .nav-btn {
+    /* --- Arrows --- */
+    .notion-widget-root .nav-btn {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      width: 46px; height: 46px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       border: 2px solid #fff;
-      background: rgba(0,0,0,0.35);
+      background: rgba(0, 0, 0, 0.35);
       color: #fff;
       font-size: 22px;
       line-height: 42px;
@@ -75,14 +86,21 @@
       cursor: pointer;
       user-select: none;
       transition: background 0.2s, color 0.2s;
+      z-index: 2;
     }
-    .nav-btn:hover { background: #fff; color: #000; }
-    #prev { left: 12px; }
-    #next { right: 12px; }
+
+    .notion-widget-root .nav-btn:hover { background: #fff; color: #000; }
+    .notion-widget-root #prev { left: 12px; }
+    .notion-widget-root #next { right: 12px; }
+
+    @media (max-width: 768px) {
+      .notion-widget-root .slider { width: 90vw; height: 70vh; }
+      .notion-widget-root .photo-frame { border-width: 8px; }
+    }
   </style>
 </head>
 <body>
-  <div>
+  <div class="notion-widget-root">
     <div class="photo-frame">
       <div class="slider" aria-live="polite">
         <div class="slide current"><img src="1.jpg" alt="Slide 1" /></div>
@@ -97,44 +115,47 @@
   </div>
 
   <script>
-    const slides = document.querySelectorAll(".slide");
-    const nextBtn = document.getElementById("next");
-    const prevBtn = document.getElementById("prev");
+    const root = document.querySelector('.notion-widget-root');
+    const slides = root.querySelectorAll('.slide');
+    const nextBtn = root.querySelector('#next');
+    const prevBtn = root.querySelector('#prev');
     const auto = true;
     const intervalTime = 5000;
     let slideInterval;
 
     function nextSlide() {
-      const current = document.querySelector(".current");
-      current.classList.remove("current");
+      const current = root.querySelector('.current');
+      current.classList.remove('current');
       (current.nextElementSibling && current.nextElementSibling.classList.contains('slide')
         ? current.nextElementSibling
-        : slides[0]).classList.add("current");
+        : slides[0]).classList.add('current');
     }
 
     function prevSlide() {
-      const current = document.querySelector(".current");
-      current.classList.remove("current");
+      const current = root.querySelector('.current');
+      current.classList.remove('current');
       (current.previousElementSibling && current.previousElementSibling.classList.contains('slide')
         ? current.previousElementSibling
-        : slides[slides.length - 1]).classList.add("current");
+        : slides[slides.length - 1]).classList.add('current');
     }
 
-    nextBtn.addEventListener("click", () => {
+    nextBtn.addEventListener('click', () => {
       nextSlide();
       if (auto) { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, intervalTime); }
     });
-    prevBtn.addEventListener("click", () => {
+    prevBtn.addEventListener('click', () => {
       prevSlide();
       if (auto) { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, intervalTime); }
     });
 
     if (auto) slideInterval = setInterval(nextSlide, intervalTime);
 
-    // Log missing images in console
-    document.querySelectorAll('.slide img').forEach(img => {
-      img.addEventListener('error', () => console.warn('Missing image:', img.getAttribute('src')));
-    });
+    // Debug helper
+    root.querySelectorAll('.slide img').forEach(img =>
+      img.addEventListener('error', () =>
+        console.warn('Missing image:', img.getAttribute('src'))
+      )
+    );
   </script>
 </body>
 </html>
