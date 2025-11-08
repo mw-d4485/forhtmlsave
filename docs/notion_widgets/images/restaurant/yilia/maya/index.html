@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- build: 2025-11-09-Notion-Autohide -->
   <title>📸相册集</title>
   <style>
     /* Notion-friendly base */
@@ -15,7 +14,7 @@
       padding: 0; margin: 0 auto;
     }
 
-    /* Frame becomes a 2-row grid: title + slider */
+    /* Frame: title + slider */
     .frame {
       position: relative;
       display: grid; grid-template-rows: auto 1fr; row-gap: 8px;
@@ -26,25 +25,24 @@
       overflow: hidden;
     }
 
-    /* Title (left-aligned, white) */
     .frame-title {
       color: #fff; font-size: 20px; font-weight: 700;
       margin: 2px 6px 0 6px; letter-spacing: 0.5px; text-align: left;
     }
 
-    /* Slider box */
     .slider {
       position: relative;
       width: min(100vw - 56px, 980px);
       height: min(80vh, 720px);
       background: #000; border-radius: 10px; overflow: hidden;
+      transition: opacity .25s;
     }
 
     .slide { position:absolute; inset:0; opacity:0; display:flex; align-items:center; justify-content:center; transition:opacity .45s ease-in-out; }
     .slide.current { opacity:1; }
     .slide img { width:100%; height:100%; object-fit:contain; user-select:none; -webkit-user-drag:none; }
 
-    /* Side arrows */
+    /* Arrows */
     .nav-btn {
       position:absolute; top:50%; transform:translateY(-50%);
       width:52px; height:52px; border-radius:50%;
@@ -55,7 +53,7 @@
     .nav-btn:hover { background:#fff; color:#000; }
     #prev{ left:14px; } #next{ right:14px; }
 
-    /* Dots (top center) */
+    /* Dots */
     .dots {
       position:absolute; top:12px; left:50%; transform:translateX(-50%);
       display:flex; gap:8px; background:rgba(45,35,27,.6);
@@ -65,7 +63,7 @@
     .dot { width:10px; height:10px; border-radius:50%; background:#bdb7af; cursor:pointer; transition:transform .15s, background .15s; }
     .dot.active { background:#f1e9dd; transform:scale(1.25); }
 
-    /* Center overlay (caption + big buttons) */
+    /* Overlay (caption + buttons) */
     .overlay {
       position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
       display:grid; gap:10px; justify-items:center; z-index:4; width:calc(100% - 32px);
@@ -86,19 +84,18 @@
     .ctrl-btn:hover { background:#ece9e6; border-color:#bfb8ae; }
     .ctrl-btn:active { transform:scale(.98); }
 
-    /* Fullscreen layout: frame fills viewport; slider expands fully */
+    /* Fullscreen layout */
     .frame:fullscreen, .frame:-webkit-full-screen {
       width:100vw; height:100vh; max-width:100vw; max-height:100vh; padding:12px; border-radius:0;
       display:grid; grid-template-rows:auto 1fr; row-gap:8px; overflow:hidden;
     }
     .frame:fullscreen .slider, .frame:-webkit-full-screen .slider { width:100%; height:100%; border-radius:0; }
-    /* Keep dots out of the browser hint bubble */
     .frame:fullscreen .dots, .frame:-webkit-full-screen .dots { top:56px; }
 
-    /* Auto-hide UI: when the slider has .ui-hidden, fade controls out */
-    .slider.ui-hidden .overlay,
-    .slider.ui-hidden .nav-btn,
-    .slider.ui-hidden .dots { opacity:0; pointer-events:none; }
+    /* Hide ONLY when playing AND idle (we add .idle while auto-playing & user inactive) */
+    .slider.playing.idle .overlay,
+    .slider.playing.idle .nav-btn,
+    .slider.playing.idle .dots { opacity:0; pointer-events:none; }
 
     @media (max-width:768px){
       .slider { width:90vw; height:70vh; }
@@ -114,7 +111,7 @@
       <div class="frame-title">📸打卡探店照片~</div>
 
       <div class="slider" id="slider" aria-live="polite">
-        <!-- Slides (add more by duplicating) -->
+        <!-- Slides -->
         <div class="slide current"><img src="1.jpg" alt="Slide 1" data-caption="特色玛雅炖锅" /></div>
         <div class="slide"><img src="2.jpg" alt="Slide 2" data-caption="墨西哥辣椒焗肉" /></div>
         <div class="slide"><img src="3.jpg" alt="Slide 3" data-caption="炖澳洲牛肉 taco" /></div>
@@ -131,9 +128,8 @@
         <div class="overlay">
           <div class="caption" id="caption"></div>
           <div class="center-buttons">
-            <button class="ctrl-btn" id="playpause" aria-pressed="false" title="开始自动播放">▶️播放 (2s)</button>
-            <button class="ctrl-btn" id="fullscreen" title="全屏切换">🔲全屏</button>
-            <button class="ctrl-btn" id="download" title="下载当前图片">💾下载</button>
+            <button class="ctrl-btn" id="playpause" aria-pressed="false">▶️播放 (2s)</button>
+            <button class="ctrl-btn" id="fullscreen">🔲全屏</button>
           </div>
         </div>
       </div>
@@ -151,11 +147,9 @@
     const captionEl = document.getElementById('caption');
     const playBtn = document.getElementById('playpause');
     const fullBtn = document.getElementById('fullscreen');
-    const dlBtn = document.getElementById('download');
 
-    /* Manual by default; Play = 2s */
     let auto = false;
-    const intervalTime = 2000;  // 2s
+    const intervalTime = 2000;   // 2s
     let slideInterval = null;
 
     /* Build dots */
@@ -178,76 +172,80 @@
     function nextSlide(){ goTo((indexOfCurrent()+1)%slides.length, false); }
     function prevSlide(){ goTo((indexOfCurrent()-1+slides.length)%slides.length, false); }
 
-    /* Autoplay */
-    function startAuto(){ if(!slideInterval) slideInterval = setInterval(nextSlide, intervalTime); }
-    function stopAuto(){ clearInterval(slideInterval); slideInterval=null; }
+    /* ---- PLAY/PAUSE with idle-hide only while playing ---- */
+    const IDLE_DELAY = 3000; // ms
+    let idleTimer = null;
+
+    function startIdleTimer(){
+      clearTimeout(idleTimer);
+      slider.classList.remove('idle');           // show UI now
+      idleTimer = setTimeout(() => {
+        if (auto) slider.classList.add('idle');  // hide only if still playing
+      }, IDLE_DELAY);
+    }
+
+    function startAuto(){
+      if (!slideInterval) slideInterval = setInterval(nextSlide, intervalTime);
+      slider.classList.add('playing');
+      startIdleTimer();                          // begin idle detection
+    }
+
+    function stopAuto(){
+      clearInterval(slideInterval); slideInterval = null;
+      slider.classList.remove('playing', 'idle'); // always show when not playing
+      clearTimeout(idleTimer);
+    }
+
     function toggleAuto(){
       auto = !auto;
       playBtn.textContent = auto ? '⏸️暂停' : '▶️播放 (2s)';
-      playBtn.setAttribute('aria-pressed', String(auto));
       auto ? startAuto() : stopAuto();
-      userActivity(); // keep controls visible momentarily
     }
 
-    playBtn.addEventListener('click', toggleAuto);
-    nextBtn.addEventListener('click', () => { nextSlide(); if(auto){stopAuto(); startAuto();} userActivity(); });
-    prevBtn.addEventListener('click', () => { prevSlide(); if(auto){stopAuto(); startAuto();} userActivity(); });
+    /* Activity resets idle only when playing */
+    function userActivity(){
+      if (auto) startIdleTimer();
+    }
 
-    document.addEventListener('visibilitychange', () => { if (document.hidden) stopAuto(); else if (auto) startAuto(); });
+    /* Controls */
+    playBtn.addEventListener('click', () => { toggleAuto(); userActivity(); });
+    nextBtn.addEventListener('click', () => { nextSlide(); if (auto){ clearInterval(slideInterval); slideInterval=null; startAuto(); } userActivity(); });
+    prevBtn.addEventListener('click', () => { prevSlide(); if (auto){ clearInterval(slideInterval); slideInterval=null; startAuto(); } userActivity(); });
 
-    /* Fullscreen */
-    fullBtn.addEventListener('click', () => {
-      if (!document.fullscreenElement) frame.requestFullscreen?.(); else document.exitFullscreen?.();
-      userActivity();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopAuto(); else if (auto) startAuto();
     });
 
-    /* Download */
-    dlBtn.addEventListener('click', () => {
-      const i = indexOfCurrent(); const img = slides[i].querySelector('img');
-      const a = document.createElement('a'); a.href = img.src;
-      a.download = img.src.split('/').pop().split('?')[0] || ('slide-'+(i+1)+'.jpg');
-      document.body.appendChild(a); a.click(); a.remove();
+    /* Fullscreen (Notion-friendly with vendor prefixes) */
+    fullBtn.addEventListener('click', () => {
+      if (frame.requestFullscreen) frame.requestFullscreen();
+      else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();     // Safari
+      else if (frame.msRequestFullscreen) frame.msRequestFullscreen();             // old Edge
       userActivity();
     });
 
     /* Keyboard + swipe */
     window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight') { nextSlide(); if(auto){stopAuto(); startAuto();} userActivity(); }
-      else if (e.key === 'ArrowLeft') { prevSlide(); if(auto){stopAuto(); startAuto();} userActivity(); }
-      else if (e.code === 'Space') { e.preventDefault(); toggleAuto(); }
+      if (e.key === 'ArrowRight') { nextSlide(); if (auto){ clearInterval(slideInterval); startAuto(); } userActivity(); }
+      else if (e.key === 'ArrowLeft') { prevSlide(); if (auto){ clearInterval(slideInterval); startAuto(); } userActivity(); }
+      else if (e.code === 'Space') { e.preventDefault(); toggleAuto(); userActivity(); }
+      else { userActivity(); }
     });
+
     let startX=null;
     slider.addEventListener('touchstart', e => { if(e.touches.length===1) startX = e.touches[0].clientX; userActivity(); }, {passive:true});
     slider.addEventListener('touchend', e => {
       if(startX===null) return;
       const dx = e.changedTouches[0].clientX - startX;
-      if(Math.abs(dx)>40){ dx<0 ? nextSlide() : prevSlide(); if(auto){stopAuto(); startAuto();} }
+      if(Math.abs(dx)>40){ dx<0 ? nextSlide() : prevSlide(); if (auto){ clearInterval(slideInterval); startAuto(); } }
       startX=null; userActivity();
     });
 
-    /* ---------- Auto-hide UI ---------- */
-    let uiTimer = null;
-    const HIDE_DELAY = 3000; // 3s
-    function showUI(){ slider.classList.remove('ui-hidden'); }
-    function hideUI(){ slider.classList.add('ui-hidden'); }
-    function userActivity(){
-      showUI();
-      clearTimeout(uiTimer);
-      uiTimer = setTimeout(hideUI, HIDE_DELAY);
-    }
-    // Show initially, then arm timer
-    userActivity();
-    // Re-show on interactions
+    /* Mouse/wheel activity (for Notion iframe too) */
     ['mousemove','mousedown','mouseup','wheel'].forEach(evt => frame.addEventListener(evt, userActivity, {passive:true}));
     frame.addEventListener('touchmove', userActivity, {passive:true});
 
-    // Prevent overlay from immediately hiding while clicking controls
-    slider.querySelectorAll('.overlay, .nav-btn, .dots, .ctrl-btn').forEach(el => {
-      el.addEventListener('mouseenter', showUI);
-      el.addEventListener('mouseleave', userActivity);
-    });
-
-    /* Init first slide */
+    /* Init */
     goTo(0,false);
   })();
   </script>
