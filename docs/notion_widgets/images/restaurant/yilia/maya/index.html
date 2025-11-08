@@ -3,159 +3,245 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- build: 2025-11-09-4 -->
   <title>📸 相册集</title>
   <style>
-    /* =============== GLOBAL RESET =============== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* =============== SCOPED WIDGET =============== */
     .notion-widget-root {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
-      background: #ffffff; /* default Notion background */
-      color: #2c2c2c;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 16px; background: #fff; color: #2c2c2c;
     }
 
-    .notion-widget-root h2 {
-      text-align: center;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-
-    /* --- Earth-toned frame --- */
-    .notion-widget-root .photo-frame {
-      background: linear-gradient(145deg,#3b2b1d,#4a3826 35%,#5b4631 65%,#3a2b1e);
-      border: 12px solid #271b13;
-      border-radius: 14px;
-      box-shadow: 0 8px 22px rgba(0,0,0,.35), inset 0 0 14px rgba(255,255,255,.12);
-      padding: 10px;
-      display: inline-block;
-      max-width: 95vw;
-    }
-
-    .notion-widget-root .slider {
+    /* Frame wrapper (goes fullscreen) */
+    .frame {
       position: relative;
-      width: min(100vw - 48px, 980px);
+      background: linear-gradient(145deg,#3b2b1d,#4a3826 35%,#5b4631 65%,#3a2b1e);
+      border: 12px solid #271b13; border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(0,0,0,.35), inset 0 0 14px rgba(255,255,255,.12);
+      padding: 12px; max-width: 95vw;
+    }
+
+    .slider {
+      position: relative;
+      width: min(100vw - 56px, 980px);
       height: min(80vh, 720px);
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-      z-index: 1;
+      background: #000; border-radius: 10px; overflow: hidden;
     }
 
-    .notion-widget-root .slide {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.45s ease-in-out;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .slide {
+      position: absolute; inset: 0;
+      opacity: 0; transition: opacity .45s ease-in-out;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .slide.current { opacity: 1; }
+
+    .slide img {
+      width: 100% !important; height: 100% !important; object-fit: contain !important;
+      display: block; user-select: none; -webkit-user-drag: none;
     }
 
-    .notion-widget-root .slide.current { opacity: 1; }
-
-    .notion-widget-root .slide img {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: contain !important;
-      display: block;
-      user-select: none;
-      -webkit-user-drag: none;
+    /* Side arrows */
+    .nav-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 2px solid #fff; background: rgba(0,0,0,.35);
+      color: #fff; font-size: 26px; line-height: 48px; text-align: center;
+      cursor: pointer; user-select: none; transition: background .2s, color .2s; z-index: 3;
     }
+    .nav-btn:hover { background: #fff; color: #000; }
+    #prev { left: 14px; } #next { right: 14px; }
 
-    /* --- Arrows --- */
-    .notion-widget-root .nav-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      background: rgba(0, 0, 0, 0.35);
-      color: #fff;
-      font-size: 22px;
-      line-height: 42px;
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.2s, color 0.2s;
-      z-index: 2;
+    /* Center overlay: caption + big buttons */
+    .overlay {
+      position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+      display: grid; gap: 12px; justify-items: center; z-index: 4;
+      width: calc(100% - 32px); pointer-events: none;
     }
+    .caption {
+      max-width: 90%;
+      padding: 10px 14px;
+      font-size: 18px; font-weight: 600; letter-spacing: .2px;
+      color: #f1e9dd; text-align: center;
+      background: rgba(70, 24, 3, 0.83);
+      border: 2px solid rgba(255, 255, 255, 0.928);
+      border-radius: 12px; backdrop-filter: blur(2px);
+      pointer-events: auto;
+    }
+    .center-buttons { display: flex; gap: 10px; pointer-events: auto; }
+    .ctrl-btn {
+      border: 1px solid #dcd2c7; background: #fff; color: #333;
+      padding: 8px 14px; border-radius: 12px; cursor: pointer;
+      font-size: 16px; font-weight: 600; min-width: 48px; text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,.15) inset; transition: transform .1s, background .15s, border-color .15s;
+    }
+    .ctrl-btn:active { transform: scale(.98); }
+    .ctrl-btn[aria-pressed="true"] { background: #efe7dc; border-color: #8b7c6a; }
 
-    .notion-widget-root .nav-btn:hover { background: #fff; color: #000; }
-    .notion-widget-root #prev { left: 12px; }
-    .notion-widget-root #next { right: 12px; }
+    /* Dots (top center) */
+    .dots {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; background: rgba(45,35,27,.6);
+      border: 1px solid rgba(255,255,255,.2); border-radius: 12px; padding: 6px 10px;
+      z-index: 4;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #bdb7af; cursor: pointer; transition: transform .15s, background .15s;
+    }
+    .dot.active { background: #f1e9dd; transform: scale(1.25); }
+
+    /* Fullscreen */
+    .frame:fullscreen, .frame:-webkit-full-screen {
+      width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; padding: 12px; border-radius: 0;
+    }
+    .frame:fullscreen .slider, .frame:-webkit-full-screen .slider {
+      width: 100%; height: 100%; border-radius: 0;
+    }
 
     @media (max-width: 768px) {
-      .notion-widget-root .slider { width: 90vw; height: 70vh; }
-      .notion-widget-root .photo-frame { border-width: 8px; }
+      .slider { width: 90vw; height: 70vh; }
+      .nav-btn { width: 46px; height: 46px; font-size: 22px; line-height: 42px; }
+      .caption { font-size: 16px; }
+      .ctrl-btn { font-size: 15px; }
     }
   </style>
 </head>
 <body>
-  <div class="notion-widget-root">
-    <div class="photo-frame">
-      <div class="slider" aria-live="polite">
-        <div class="slide current"><img src="1.jpg" alt="Slide 1" /></div>
-        <div class="slide"><img src="2.jpg" alt="Slide 2" /></div>
-        <div class="slide"><img src="3.jpg" alt="Slide 3" /></div>
-        <div class="slide"><img src="4.jpg" alt="Slide 4" /></div>
+  <div class="notion-widget-root" id="widget">
+    <div class="frame" id="frame">
+      <div class="slider" id="slider" aria-live="polite">
+        <div class="slide current"><img src="1.jpg" alt="Slide 1" data-caption="特色玛雅炖锅" /></div>
+        <div class="slide"><img src="2.jpg" alt="Slide 2" data-caption="墨西哥辣椒焗肉" /></div>
+        <div class="slide"><img src="3.jpg" alt="Slide 3" data-caption="炖澳洲牛肉taco" /></div>
+        <div class="slide"><img src="4.jpg" alt="Slide 4" data-caption="餐厅一角~" /></div>
 
         <div id="prev" class="nav-btn" aria-label="上一张">←</div>
         <div id="next" class="nav-btn" aria-label="下一张">→</div>
+
+        <div class="dots" id="dots"></div>
+
+        <div class="overlay">
+          <div class="caption" id="caption"></div>
+          <div class="center-buttons">
+            <button class="ctrl-btn" id="playpause" aria-pressed="false" title="开始自动播放">▶️播放 (2s)</button>
+            <button class="ctrl-btn" id="fullscreen" title="全屏切换">🔲全屏</button>
+            <button class="ctrl-btn" id="download" title="下载当前图片">💾下载</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    const root = document.querySelector('.notion-widget-root');
-    const slides = root.querySelectorAll('.slide');
-    const nextBtn = root.querySelector('#next');
-    const prevBtn = root.querySelector('#prev');
-    const auto = true;
-    const intervalTime = 5000;
-    let slideInterval;
+  (function(){
+    const root = document.getElementById('widget');
+    const frame = document.getElementById('frame');
+    const slider = document.getElementById('slider');
+    const slides = Array.from(slider.querySelectorAll('.slide'));
+    const nextBtn = slider.querySelector('#next');
+    const prevBtn = slider.querySelector('#prev');
+    const dotsWrap = slider.querySelector('#dots');
+    const captionEl = slider.querySelector('#caption');
+    const playBtn = slider.querySelector('#playpause');
+    const fullBtn = slider.querySelector('#fullscreen');
+    const dlBtn = slider.querySelector('#download');
 
-    function nextSlide() {
-      const current = root.querySelector('.current');
-      current.classList.remove('current');
-      (current.nextElementSibling && current.nextElementSibling.classList.contains('slide')
-        ? current.nextElementSibling
-        : slides[0]).classList.add('current');
-    }
+    // ---- autoplay (defaults OFF) ----
+    let auto = false;                 // manual by default
+    const intervalTime = 2000;        // 1s as requested
+    let slideInterval = null;
 
-    function prevSlide() {
-      const current = root.querySelector('.current');
-      current.classList.remove('current');
-      (current.previousElementSibling && current.previousElementSibling.classList.contains('slide')
-        ? current.previousElementSibling
-        : slides[slides.length - 1]).classList.add('current');
-    }
-
-    nextBtn.addEventListener('click', () => {
-      nextSlide();
-      if (auto) { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, intervalTime); }
-    });
-    prevBtn.addEventListener('click', () => {
-      prevSlide();
-      if (auto) { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, intervalTime); }
+    // build dots
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i===0 ? ' active' : '');
+      d.setAttribute('data-index', i);
+      d.addEventListener('click', () => goTo(i, /*restart=*/false));
+      dotsWrap.appendChild(d);
     });
 
-    if (auto) slideInterval = setInterval(nextSlide, intervalTime);
+    function indexOfCurrent(){ return slides.findIndex(s => s.classList.contains('current')); }
+    function setCaption(i){
+      const img = slides[i].querySelector('img');
+      captionEl.textContent = img.getAttribute('data-caption') || '';
+    }
+    function setActiveDot(i){
+      dotsWrap.querySelectorAll('.dot').forEach((el, idx) => el.classList.toggle('active', idx===i));
+    }
+    function goTo(i, restart){
+      const cur = slider.querySelector('.slide.current');
+      if (cur) cur.classList.remove('current');
+      slides[i].classList.add('current');
+      setActiveDot(i); setCaption(i);
+      if (restart && auto) { stopAuto(); startAuto(); }
+    }
+    function nextSlide(){ goTo((indexOfCurrent()+1)%slides.length, false); }
+    function prevSlide(){ goTo((indexOfCurrent()-1+slides.length)%slides.length, false); }
 
-    // Debug helper
-    root.querySelectorAll('.slide img').forEach(img =>
-      img.addEventListener('error', () =>
-        console.warn('Missing image:', img.getAttribute('src'))
-      )
-    );
+    // autoplay controls
+    function startAuto(){ if(!slideInterval) slideInterval = setInterval(nextSlide, intervalTime); }
+    function stopAuto(){ clearInterval(slideInterval); slideInterval=null; }
+    function toggleAuto(){
+      auto = !auto;
+      playBtn.textContent = auto ? '⏸️暂停' : '▶️播放 (2s)';
+      playBtn.setAttribute('aria-pressed', String(auto));
+      auto ? startAuto() : stopAuto();
+    }
+
+    playBtn.addEventListener('click', toggleAuto);
+    nextBtn.addEventListener('click', () => { prevNextAction(nextSlide); });
+    prevBtn.addEventListener('click', () => { prevNextAction(prevSlide); });
+
+    function prevNextAction(fn){
+      fn();
+      // Do not switch to autoplay; if already auto, keep cadence smooth
+      if (auto) { stopAuto(); startAuto(); }
+    }
+
+    // pause when tab hidden; resume when visible (only if auto was on)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopAuto();
+      else if (auto) startAuto();
+    });
+
+    // fullscreen
+    fullBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) frame.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    });
+
+    // download current
+    dlBtn.addEventListener('click', () => {
+      const i = indexOfCurrent();
+      const img = slides[i].querySelector('img');
+      const a = document.createElement('a');
+      a.href = img.src;
+      a.download = (img.src.split('/').pop().split('?')[0] || ('slide-'+(i+1)+'.jpg'));
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    // keyboard + swipe
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') prevNextAction(nextSlide);
+      else if (e.key === 'ArrowLeft') prevNextAction(prevSlide);
+      else if (e.code === 'Space') { e.preventDefault(); toggleAuto(); }
+    });
+    let startX=null;
+    slider.addEventListener('touchstart', e => { if(e.touches.length===1) startX = e.touches[0].clientX; }, {passive:true});
+    slider.addEventListener('touchend', e => {
+      if(startX===null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if(Math.abs(dx)>40){ dx<0 ? prevNextAction(nextSlide) : prevNextAction(prevSlide); }
+      startX=null;
+    });
+
+    // init: show first slide & caption (manual mode)
+    goTo(0,false);
+    playBtn.textContent = '▶️播放 (2s)';
+    playBtn.setAttribute('aria-pressed','false');
+  })();
   </script>
 </body>
 </html>
