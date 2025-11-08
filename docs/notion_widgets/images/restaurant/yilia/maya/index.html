@@ -5,130 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>📸相册集</title>
   <style>
-    /* Notion-friendly base */
-    html, body { margin:0; padding:0; background:transparent; overflow:hidden; }
-    .notion-widget-root {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-      background: transparent;
-      display: flex; align-items: center; justify-content: center;
-      padding: 0; margin: 0 auto;
+    html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+    .notion-widget-root{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+      display:flex;align-items:center;justify-content:center;background:transparent
     }
-
-    /* Frame: title + slider */
-    .frame {
-      position: relative;
-      display: grid; grid-template-rows: auto 1fr; row-gap: 8px;
-      background: linear-gradient(145deg,#2d2219,#3a2c1f 35%,#4a3826 65%,#2d2219);
-      border: 8px solid #20160f; border-radius: 12px;
-      max-width: 95vw; padding: 12px;
-      box-shadow: 0 8px 22px rgba(0,0,0,.3), inset 0 0 10px rgba(255,255,255,.1);
-      overflow: hidden;
+    .frame{
+      position:relative;display:grid;grid-template-rows:auto 1fr;row-gap:8px;
+      background:linear-gradient(145deg,#2d2219,#3a2c1f 35%,#4a3826 65%,#2d2219);
+      border:8px solid #20160f;border-radius:12px;max-width:95vw;padding:12px;
+      box-shadow:0 8px 22px rgba(0,0,0,.3),inset 0 0 10px rgba(255,255,255,.1)
     }
-
-    .frame-title {
-      color: #fff; font-size: 20px; font-weight: 700;
-      margin: 2px 6px 0 6px; letter-spacing: 0.5px; text-align: left;
+    .frame-title{color:#fff;font-size:20px;font-weight:700;margin:2px 6px;text-align:left}
+    .slider{
+      position:relative;width:min(100vw - 56px,980px);height:min(80vh,720px);
+      background:#000;border-radius:10px;overflow:hidden;transition:opacity .25s
     }
-
-    .slider {
-      position: relative;
-      width: min(100vw - 56px, 980px);
-      height: min(80vh, 720px);
-      background: #000; border-radius: 10px; overflow: hidden;
-      transition: opacity .25s;
+    .slide{position:absolute;inset:0;opacity:0;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease-in-out}
+    .slide.current{opacity:1}
+    .slide img{width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+    .nav-btn{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:52px;height:52px;border-radius:50%;border:2px solid #fff;
+      background:rgba(0,0,0,.35);color:#fff;font-size:26px;line-height:48px;text-align:center;
+      cursor:pointer;transition:background .2s,color .2s,opacity .25s;z-index:3
     }
-
-    .slide { position:absolute; inset:0; opacity:0; display:flex; align-items:center; justify-content:center; transition:opacity .45s ease-in-out; }
-    .slide.current { opacity:1; }
-    .slide img { width:100%; height:100%; object-fit:contain; user-select:none; -webkit-user-drag:none; }
-
-    /* Arrows */
-    .nav-btn {
-      position:absolute; top:50%; transform:translateY(-50%);
-      width:52px; height:52px; border-radius:50%;
-      border:2px solid #fff; background:rgba(0,0,0,.35);
-      color:#fff; font-size:26px; line-height:48px; text-align:center;
-      cursor:pointer; user-select:none; transition:background .2s, color .2s, opacity .25s; z-index:3;
+    .nav-btn:hover{background:#fff;color:#000}
+    #prev{left:14px}#next{right:14px}
+    .dots{
+      position:absolute;top:12px;left:50%;transform:translateX(-50%);
+      display:flex;gap:8px;background:rgba(45,35,27,.6);
+      border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:6px 10px;
+      z-index:4;transition:opacity .25s
     }
-    .nav-btn:hover { background:#fff; color:#000; }
-    #prev{ left:14px; } #next{ right:14px; }
-
-    /* Dots */
-    .dots {
-      position:absolute; top:12px; left:50%; transform:translateX(-50%);
-      display:flex; gap:8px; background:rgba(45,35,27,.6);
-      border:1px solid rgba(255,255,255,.2); border-radius:12px; padding:6px 10px;
-      z-index:4; transition:opacity .25s;
+    .dot{width:10px;height:10px;border-radius:50%;background:#bdb7af;cursor:pointer;transition:transform .15s,background .15s}
+    .dot.active{background:#f1e9dd;transform:scale(1.25)}
+    .overlay{
+      position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+      display:grid;gap:10px;justify-items:center;z-index:4;width:calc(100% - 32px);
+      pointer-events:none;transition:opacity .25s
     }
-    .dot { width:10px; height:10px; border-radius:50%; background:#bdb7af; cursor:pointer; transition:transform .15s, background .15s; }
-    .dot.active { background:#f1e9dd; transform:scale(1.25); }
-
-    /* Overlay (caption + buttons) */
-    .overlay {
-      position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
-      display:grid; gap:10px; justify-items:center; z-index:4; width:calc(100% - 32px);
-      pointer-events:none; transition:opacity .25s;
+    .caption{
+      max-width:90%;padding:10px 14px;font-size:18px;font-weight:700;color:#f1e9dd;text-align:center;
+      background:rgba(70,24,3,.83);border:2px solid rgba(255,255,255,.9);border-radius:12px;
+      pointer-events:auto
     }
-    .caption {
-      max-width:90%; padding:10px 14px; font-size:18px; font-weight:700; letter-spacing:.2px;
-      color:#f1e9dd; text-align:center;
-      background:rgba(70,24,3,.83); border:2px solid rgba(255,255,255,.9); border-radius:12px;
-      pointer-events:auto;
+    .center-buttons{display:flex;gap:10px;pointer-events:auto}
+    .ctrl-btn{
+      background:#f6f5f4;color:#2e2e2e;border:1px solid #d1ccc4;border-radius:10px;
+      padding:8px 14px;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,transform .05s
     }
-    .center-buttons { display:flex; gap:10px; pointer-events:auto; }
-    .ctrl-btn {
-      background:#f6f5f4; color:#2e2e2e; border:1px solid #d1ccc4; border-radius:10px;
-      padding:8px 14px; font-size:16px; font-weight:700; min-width:48px; text-align:center;
-      cursor:pointer; transition:background .15s, border-color .15s, transform .05s;
-    }
-    .ctrl-btn:hover { background:#ece9e6; border-color:#bfb8ae; }
-    .ctrl-btn:active { transform:scale(.98); }
-
-    /* Fullscreen layout */
-    .frame:fullscreen, .frame:-webkit-full-screen {
-      width:100vw; height:100vh; max-width:100vw; max-height:100vh; padding:12px; border-radius:0;
-      display:grid; grid-template-rows:auto 1fr; row-gap:8px; overflow:hidden;
-    }
-    .frame:fullscreen .slider, .frame:-webkit-full-screen .slider { width:100%; height:100%; border-radius:0; }
-    .frame:fullscreen .dots, .frame:-webkit-full-screen .dots { top:56px; }
-
-    /* Hide ONLY when playing AND idle (we add .idle while auto-playing & user inactive) */
+    .ctrl-btn:hover{background:#ece9e6;border-color:#bfb8ae}
+    .ctrl-btn:active{transform:scale(.98)}
+    .frame:fullscreen,.frame:-webkit-full-screen{width:100vw;height:100vh;max-width:100vw;max-height:100vh;padding:12px;border-radius:0}
+    .frame:fullscreen .slider,.frame:-webkit-full-screen .slider{width:100%;height:100%;border-radius:0}
+    .frame:fullscreen .dots,.frame:-webkit-full-screen .dots{top:56px}
     .slider.playing.idle .overlay,
     .slider.playing.idle .nav-btn,
-    .slider.playing.idle .dots { opacity:0; pointer-events:none; }
-
-    @media (max-width:768px){
-      .slider { width:90vw; height:70vh; }
-      .caption { font-size:16px; }
-      .ctrl-btn { font-size:15px; }
-      .frame-title { font-size:18px; }
+    .slider.playing.idle .dots{opacity:0;pointer-events:none}
+    @media(max-width:768px){
+      .slider{width:90vw;height:70vh}
+      .caption{font-size:16px}.ctrl-btn{font-size:15px}.frame-title{font-size:18px}
     }
   </style>
 </head>
 <body>
-  <div class="notion-widget-root" id="widget">
+  <div class="notion-widget-root">
     <div class="frame" id="frame">
       <div class="frame-title">📸打卡探店照片~</div>
 
       <div class="slider" id="slider" aria-live="polite">
-        <!-- Slides -->
-        <div class="slide current"><img src="1.jpg" alt="Slide 1" data-caption="特色玛雅炖锅" /></div>
-        <div class="slide"><img src="2.jpg" alt="Slide 2" data-caption="墨西哥辣椒焗肉" /></div>
-        <div class="slide"><img src="3.jpg" alt="Slide 3" data-caption="炖澳洲牛肉 taco" /></div>
-        <div class="slide"><img src="4.jpg" alt="Slide 4" data-caption="餐厅一角~" /></div>
+        <div class="slide current"><img src="1.jpg" alt="Slide 1" data-caption="特色玛雅炖锅"/></div>
+        <div class="slide"><img src="2.jpg" alt="Slide 2" data-caption="墨西哥辣椒焗肉"/></div>
+        <div class="slide"><img src="3.jpg" alt="Slide 3" data-caption="炖澳洲牛肉 taco"/></div>
+        <div class="slide"><img src="4.jpg" alt="Slide 4" data-caption="餐厅一角~"/></div>
 
-        <!-- arrows -->
-        <div id="prev" class="nav-btn" aria-label="上一张">←</div>
-        <div id="next" class="nav-btn" aria-label="下一张">→</div>
-
-        <!-- dots -->
+        <div id="prev" class="nav-btn">←</div>
+        <div id="next" class="nav-btn">→</div>
         <div class="dots" id="dots"></div>
 
-        <!-- caption + buttons -->
         <div class="overlay">
           <div class="caption" id="caption"></div>
           <div class="center-buttons">
-            <button class="ctrl-btn" id="playpause" aria-pressed="false">▶️播放 (2s)</button>
+            <button class="ctrl-btn" id="playpause">▶️播放 (2s)</button>
             <button class="ctrl-btn" id="fullscreen">🔲全屏</button>
           </div>
         </div>
@@ -138,114 +97,76 @@
 
   <script>
   (function(){
-    const frame = document.getElementById('frame');
-    const slider = document.getElementById('slider');
-    const slides = Array.from(slider.querySelectorAll('.slide'));
-    const nextBtn = document.getElementById('next');
-    const prevBtn = document.getElementById('prev');
-    const dotsWrap = document.getElementById('dots');
-    const captionEl = document.getElementById('caption');
-    const playBtn = document.getElementById('playpause');
-    const fullBtn = document.getElementById('fullscreen');
+    const frame=document.getElementById('frame');
+    const slider=document.getElementById('slider');
+    const slides=[...slider.querySelectorAll('.slide')];
+    const next=document.getElementById('next');
+    const prev=document.getElementById('prev');
+    const dotsWrap=document.getElementById('dots');
+    const caption=document.getElementById('caption');
+    const playBtn=document.getElementById('playpause');
+    const fullBtn=document.getElementById('fullscreen');
 
-    let auto = false;
-    const intervalTime = 2000;   // 2s
-    let slideInterval = null;
+    let auto=false,slideInterval=null,idleTimer=null;
+    const interval=2000,IDLE_DELAY=3000;
 
-    /* Build dots */
-    slides.forEach((_, i) => {
-      const d = document.createElement('div');
-      d.className = 'dot' + (i===0 ? ' active' : '');
-      d.dataset.index = i;
-      d.addEventListener('click', () => { goTo(i, false); userActivity(); });
+    slides.forEach((_,i)=>{
+      const d=document.createElement('div');
+      d.className='dot'+(i===0?' active':'');
+      d.dataset.index=i;
+      d.onclick=()=>{goTo(i,false);userActivity()};
       dotsWrap.appendChild(d);
     });
 
-    function indexOfCurrent(){ return slides.findIndex(s => s.classList.contains('current')); }
-    function setCaption(i){ captionEl.textContent = slides[i].querySelector('img').dataset.caption || ''; }
-    function setActiveDot(i){ dotsWrap.querySelectorAll('.dot').forEach((el,idx)=>el.classList.toggle('active', idx===i)); }
-    function goTo(i, restart){
-      const cur = slider.querySelector('.slide.current'); if (cur) cur.classList.remove('current');
-      slides[i].classList.add('current'); setActiveDot(i); setCaption(i);
-      if (restart && auto) { stopAuto(); startAuto(); }
-    }
-    function nextSlide(){ goTo((indexOfCurrent()+1)%slides.length, false); }
-    function prevSlide(){ goTo((indexOfCurrent()-1+slides.length)%slides.length, false); }
+    function current(){return slides.findIndex(s=>s.classList.contains('current'))}
+    function setCaption(i){caption.textContent=slides[i].querySelector('img').dataset.caption||''}
+    function setDot(i){dotsWrap.querySelectorAll('.dot').forEach((el,idx)=>el.classList.toggle('active',idx===i))}
+    function goTo(i,restart){const cur=slider.querySelector('.current');if(cur)cur.classList.remove('current');slides[i].classList.add('current');setDot(i);setCaption(i);if(restart&&auto){stopAuto();startAuto();}}
+    function nextSlide(){goTo((current()+1)%slides.length,false)}
+    function prevSlide(){goTo((current()-1+slides.length)%slides.length,false)}
 
-    /* ---- PLAY/PAUSE with idle-hide only while playing ---- */
-    const IDLE_DELAY = 3000; // ms
-    let idleTimer = null;
+    function startIdle(){clearTimeout(idleTimer);slider.classList.remove('idle');idleTimer=setTimeout(()=>{if(auto)slider.classList.add('idle')},IDLE_DELAY);}
+    function startAuto(){if(!slideInterval)slideInterval=setInterval(nextSlide,interval);slider.classList.add('playing');startIdle()}
+    function stopAuto(){clearInterval(slideInterval);slideInterval=null;slider.classList.remove('playing','idle');clearTimeout(idleTimer)}
+    function toggleAuto(){auto=!auto;playBtn.textContent=auto?'⏸️暂停':'▶️播放 (2s)';auto?startAuto():stopAuto()}
+    function userActivity(){if(auto)startIdle()}
 
-    function startIdleTimer(){
-      clearTimeout(idleTimer);
-      slider.classList.remove('idle');           // show UI now
-      idleTimer = setTimeout(() => {
-        if (auto) slider.classList.add('idle');  // hide only if still playing
-      }, IDLE_DELAY);
-    }
+    playBtn.onclick=()=>{toggleAuto();userActivity()};
+    next.onclick=()=>{nextSlide();if(auto){stopAuto();startAuto()}userActivity()};
+    prev.onclick=()=>{prevSlide();if(auto){stopAuto();startAuto()}userActivity()};
 
-    function startAuto(){
-      if (!slideInterval) slideInterval = setInterval(nextSlide, intervalTime);
-      slider.classList.add('playing');
-      startIdleTimer();                          // begin idle detection
-    }
-
-    function stopAuto(){
-      clearInterval(slideInterval); slideInterval = null;
-      slider.classList.remove('playing', 'idle'); // always show when not playing
-      clearTimeout(idleTimer);
-    }
-
-    function toggleAuto(){
-      auto = !auto;
-      playBtn.textContent = auto ? '⏸️暂停' : '▶️播放 (2s)';
-      auto ? startAuto() : stopAuto();
-    }
-
-    /* Activity resets idle only when playing */
-    function userActivity(){
-      if (auto) startIdleTimer();
-    }
-
-    /* Controls */
-    playBtn.addEventListener('click', () => { toggleAuto(); userActivity(); });
-    nextBtn.addEventListener('click', () => { nextSlide(); if (auto){ clearInterval(slideInterval); slideInterval=null; startAuto(); } userActivity(); });
-    prevBtn.addEventListener('click', () => { prevSlide(); if (auto){ clearInterval(slideInterval); slideInterval=null; startAuto(); } userActivity(); });
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stopAuto(); else if (auto) startAuto();
-    });
-
-    /* Fullscreen (Notion-friendly with vendor prefixes) */
-    fullBtn.addEventListener('click', () => {
-      if (frame.requestFullscreen) frame.requestFullscreen();
-      else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();     // Safari
-      else if (frame.msRequestFullscreen) frame.msRequestFullscreen();             // old Edge
+    /* ---- Fullscreen with safe fallback ---- */
+    fullBtn.onclick=()=>{
+      const el=frame;
+      try{
+        if(el.requestFullscreen) el.requestFullscreen();
+        else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if(el.msRequestFullscreen) el.msRequestFullscreen();
+        else throw 'not-supported';
+      }catch(e){
+        // fallback: open new window view
+        const win=window.open(window.location.href,'_blank');
+        if(!win) alert('浏览器或 Notion 阻止了全屏。请允许弹出窗口。');
+      }
       userActivity();
-    });
+    };
 
-    /* Keyboard + swipe */
-    window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight') { nextSlide(); if (auto){ clearInterval(slideInterval); startAuto(); } userActivity(); }
-      else if (e.key === 'ArrowLeft') { prevSlide(); if (auto){ clearInterval(slideInterval); startAuto(); } userActivity(); }
-      else if (e.code === 'Space') { e.preventDefault(); toggleAuto(); userActivity(); }
-      else { userActivity(); }
-    });
+    document.onvisibilitychange=()=>{if(document.hidden)stopAuto();else if(auto)startAuto();};
+    window.onkeydown=e=>{
+      if(e.key==='ArrowRight'){nextSlide();if(auto){stopAuto();startAuto()}}
+      else if(e.key==='ArrowLeft'){prevSlide();if(auto){stopAuto();startAuto()}}
+      else if(e.code==='Space'){e.preventDefault();toggleAuto()}
+      userActivity();
+    };
 
     let startX=null;
-    slider.addEventListener('touchstart', e => { if(e.touches.length===1) startX = e.touches[0].clientX; userActivity(); }, {passive:true});
-    slider.addEventListener('touchend', e => {
-      if(startX===null) return;
-      const dx = e.changedTouches[0].clientX - startX;
-      if(Math.abs(dx)>40){ dx<0 ? nextSlide() : prevSlide(); if (auto){ clearInterval(slideInterval); startAuto(); } }
-      startX=null; userActivity();
+    slider.addEventListener('touchstart',e=>{if(e.touches.length===1)startX=e.touches[0].clientX;userActivity()},{passive:true});
+    slider.addEventListener('touchend',e=>{
+      if(startX===null)return;const dx=e.changedTouches[0].clientX-startX;
+      if(Math.abs(dx)>40){dx<0?nextSlide():prevSlide();if(auto){stopAuto();startAuto()}}
+      startX=null;userActivity();
     });
-
-    /* Mouse/wheel activity (for Notion iframe too) */
-    ['mousemove','mousedown','mouseup','wheel'].forEach(evt => frame.addEventListener(evt, userActivity, {passive:true}));
-    frame.addEventListener('touchmove', userActivity, {passive:true});
-
-    /* Init */
+    ['mousemove','mousedown','mouseup','wheel','touchmove'].forEach(ev=>frame.addEventListener(ev,userActivity,{passive:true}));
     goTo(0,false);
   })();
   </script>
