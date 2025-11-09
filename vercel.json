@@ -1,7 +1,9 @@
 {
-  "builds": [{ "src": "docs/notion_widgets/**", "use": "@vercel/static" }],
+  "builds": [
+    { "src": "docs/notion_widgets/**", "use": "@vercel/static" }
+  ],
   "routes": [
-    { "src": "^/$", "dest": "docs/notion_widgets/index.html" },
-    { "src": "/(.*)", "dest": "docs/notion_widgets/$1" }
+    { "src": "^/$", "dest": "/docs/notion_widgets/index.html" },
+    { "src": "/(.*)", "dest": "/docs/notion_widgets/$1" }
   ]
 }
