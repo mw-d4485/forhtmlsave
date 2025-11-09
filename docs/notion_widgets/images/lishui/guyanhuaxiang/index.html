@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>📸相册集</title>
+  <style>
+    /* ---------- Base (Notion-friendly) ---------- */
+    html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+    .notion-widget-root{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+      display:flex;align-items:center;justify-content:center;background:transparent
+    }
+
+    /* ---------- Roland-Garros refined theme (Orange-Clay × Cream × Hint of Green) ---------- */
+    :root{
+      --clay:#d36b37;        /* brighter terracotta orange (noticeable on white) */
+      --clay-deep:#af481c;   /* deeper burnt orange for borders */
+      --leather:#d27245e9;     /* warm leather tone */
+      --cream:#f6f2ea;       /* silky canvas cream */
+      --ash:#d6d3ce;         /* soft gray (spare) */
+      --life:#88b978;        /* subtle moss-green accent */
+      --forest:#3b422b;      /* muted green-brown for text */
+    }
+
+    .frame{
+      position:relative;display:grid;grid-template-rows:auto 1fr;row-gap:8px;
+      /* Cream-dominant center, orange accents, faint green at edges */
+      background:
+        radial-gradient(1200px 700px at 15% 15%, rgba(136,185,120,.08), transparent 55%),
+        radial-gradient(900px 600px at 85% 85%, rgba(136,185,120,.06), transparent 60%),
+        linear-gradient(160deg,
+          var(--cream) 0%, #f2ece3 20%, #ecdcc7 32%, #e0b997 46%,
+          #d67b45 64%, var(--clay) 85%, var(--leather) 90%);
+      border:6px solid var(--clay-deep);           /* thinner outer border */
+      border-radius:14px;
+      max-width:95vw; padding:12px;
+      box-shadow:
+        0 10px 20px rgba(80,35,10,.28),
+        inset 0 0 0 1px rgba(255,255,255,.5);
+      overflow:hidden;
+    }
+
+    /* Title in forest tone with clay→green underline */
+    .frame-title{
+      color:var(--forest);
+      font-size:20px;font-weight:800;letter-spacing:.4px;text-align:left;
+      margin:2px 6px 0 6px;position:relative;
+    }
+    .frame-title::after{
+      content:"";position:absolute;left:6px;right:calc(100% - 140px);bottom:-6px;height:3px;
+      background:linear-gradient(90deg,var(--clay),var(--life));border-radius:2px;opacity:.9;
+    }
+
+    /* Stage */
+    .slider{
+      position:relative;width:min(100vw - 56px,980px);height:min(80vh,720px);
+      background:#000;border-radius:12px;overflow:hidden;transition:opacity .25s;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .slide{position:absolute;inset:0;opacity:0;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease-in-out}
+    .slide.current{opacity:1}
+    .slide img{width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+
+    /* Arrows: cream ring; clay hover */
+    .nav-btn{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:54px;height:54px;border-radius:50%;
+      border:2px solid var(--cream);background:rgba(0,0,0,.38);color:var(--cream);
+      font-size:26px;line-height:50px;text-align:center;cursor:pointer;z-index:3;
+      transition:background .2s,color .2s,border-color .2s,transform .05s;
+      box-shadow:0 2px 8px rgba(0,0,0,.45);
+    }
+    .nav-btn:hover{background:var(--cream);color:#000;border-color:var(--clay)}
+    .nav-btn:active{transform:translateY(-50%) scale(.98)}
+    #prev{left:14px} #next{right:14px}
+
+    /* Dots bar */
+    .dots{
+      position:absolute;top:12px;left:50%;transform:translateX(-50%);
+      display:flex;gap:8px;background:rgba(214,123,69,.55); /* soft clay */
+      border:1px solid rgba(255,255,255,.45);border-radius:12px;padding:6px 10px;z-index:4;
+      box-shadow:0 3px 8px rgba(0,0,0,.35);transition:opacity .25s;
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--cream);cursor:pointer;transition:transform .15s,background .15s,box-shadow .15s}
+    .dot.active{background:var(--clay);box-shadow:0 0 0 3px rgba(136,185,120,.45);transform:scale(1.2)}
+
+    /* Caption + buttons */
+    .overlay{
+      position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+      display:grid;gap:10px;justify-items:center;z-index:4;width:calc(100% - 32px);
+      pointer-events:none;transition:opacity .25s;
+    }
+    .caption{
+      max-width:90%;padding:10px 14px;font-size:18px;font-weight:800;letter-spacing:.2px;
+      color:#fffdf8;text-align:center;background:rgba(182,90,46,.83);
+      border:2px solid rgba(246,242,234,.95);border-radius:12px;box-shadow:0 6px 14px rgba(0,0,0,.45);
+      pointer-events:auto;
+    }
+
+    .center-buttons{display:flex;gap:10px;pointer-events:auto}
+    .ctrl-btn{
+      position:relative;
+      background:linear-gradient(180deg,#faf7f1 0%,#f2ede4 55%,#e9dece 100%);
+      color:#3d2c1f;border:1px solid #c9a88e;border-radius:12px;
+      padding:9px 14px;font-size:16px;font-weight:800;cursor:pointer;
+      box-shadow:0 1px 3px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.5);
+      transition:transform .05s,border-color .15s,box-shadow .15s;
+    }
+    .ctrl-btn:hover{border-color:var(--clay);box-shadow:0 2px 6px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.6)}
+    .ctrl-btn:active{transform:scale(.98)}
+    .ctrl-btn::after{
+      content:"";position:absolute;left:8px;top:7px;bottom:7px;width:4px;
+      background:linear-gradient(180deg,var(--clay),var(--life));border-radius:3px;opacity:.8;
+    }
+
+    /* Fullscreen layout */
+    .frame:fullscreen,.frame:-webkit-full-screen{
+      width:100vw;height:100vh;max-width:100vw;max-height:100vh;padding:12px;border-radius:0;
+      grid-template-rows:auto 1fr;row-gap:8px;overflow:hidden;
+    }
+    .frame:fullscreen .slider,.frame:-webkit-full-screen .slider{width:100%;height:100%;border-radius:12px}
+    .frame:fullscreen .dots,.frame:-webkit-full-screen .dots{top:56px}
+
+    /* Hide controls only when playing AND idle */
+    .slider.playing.idle .overlay,
+    .slider.playing.idle .nav-btn,
+    .slider.playing.idle .dots{opacity:0;pointer-events:none}
+
+    @media (max-width:768px){
+      .slider{width:90vw;height:70vh}
+      .caption{font-size:16px}
+      .ctrl-btn{font-size:15px}
+      .frame-title{font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="notion-widget-root">
+    <div class="frame" id="frame">
+      <!-- You can change this title per trip album -->
+      <div class="frame-title">📸此景点照片:</div>
+
+      <div class="slider" id="slider" aria-live="polite">
+        <!-- Replace these with your travel photos -->
+        <div class="slide current"><img src="1.jpg" alt="Slide 1" data-caption="古堰画乡导览图"/></div>
+        <div class="slide"><img src="2.jpg" alt="Slide 2" data-caption="<刘廷玑>像"/></div>
+        <div class="slide"><img src="3.jpg" alt="Slide 3" data-caption="赑屃像(智福之神)"/></div>
+        <div class="slide"><img src="4.jpg" alt="Slide 4" data-caption="阳光下的松阴溪上小岛"/></div>
+        <div class="slide"><img src="5.jpg" alt="Slide 5" data-caption="松阴溪两岸"/></div>
+        <div class="slide"><img src="6.jpg" alt="Slide 6" data-caption="松阴溪小岛全景"/></div>
+        <div class="slide"><img src="7.jpg" alt="Slide 7" data-caption="<范成大>像"/></div>
+        <div class="slide"><img src="8.jpg" alt="Slide 8" data-caption="汀步桥对岸溪流"/></div>
+        <div class="slide"><img src="9.jpg" alt="Slide 9" data-caption="你可以表达自己的感受，你可以不完美"/></div>
+        <div class="slide"><img src="11.jpg" alt="Slide 10" data-caption="古堰入画"/></div>
+        <div class="slide"><img src="12.jpg" alt="Slide 11" data-caption="观景台一隅(左)"/></div>
+        <div class="slide"><img src="13.jpg" alt="Slide 12" data-caption="观景台一隅(右)"/></div>
+        <div class="slide"><img src="14.jpg" alt="Slide 13" data-caption="<通济堰大坝>一览"/></div>
+        <div class="slide"><img src="15.jpg" alt="Slide 14" data-caption="通济堰观景台"/></div>
+        <div class="slide"><img src="16.jpg" alt="Slide 15" data-caption="通济堰石碑"/></div>
+        <div class="slide"><img src="17.jpg" alt="Slide 16" data-caption="<何澹>像"/></div>
+        <div class="slide"><img src="18.jpg" alt="Slide 17" data-caption="《山林食事》🦜"/></div>
+        <div class="slide"><img src="19.jpg" alt="Slide 18" data-caption="南山映秀"/></div>
+        <div class="slide"><img src="20.jpg" alt="Slide 19" data-caption="绿帘竹筏&古樟"/></div>
+        <div class="slide"><img src="21.jpg" alt="Slide 20" data-caption="📸出片点示例"/></div>
+        <div class="slide"><img src="22.jpg" alt="Slide 21" data-caption="舍利树(1500岁+)"/></div>
+        <div class="slide"><img src="23.jpg" alt="Slide 22" data-caption="《樟宿》咖啡馆"/></div>
+        <div class="slide"><img src="24.jpg" alt="Slide 23" data-caption="节孝牌坊"/></div>
+        <div class="slide"><img src="25.jpg" alt="Slide 24" data-caption="古樟群下の小桥流水"/></div>
+        <div class="slide"><img src="26.jpg" alt="Slide 25" data-caption="文昌阁"/></div>
+        <div class="slide"><img src="27.jpg" alt="Slide 26" data-caption="堰头村"/></div>
+        <div class="slide"><img src="28.jpg" alt="Slide 27" data-caption="石函&王褆"/></div>
+        <div class="slide"><img src="29.jpg" alt="Slide 28" data-caption="🔥网红<石函仙境>"/></div>
+        <div class="slide"><img src="30.jpg" alt="Slide 29" data-caption="祈福神树🌳"/></div>
+        <div class="slide"><img src="31.jpg" alt="Slide 30" data-caption="祈福神树与红绳🎀"/></div>
+        <div class="slide"><img src="32.jpg" alt="Slide 31" data-caption="8号游船"/></div>
+        <div class="slide"><img src="33.jpg" alt="Slide 32" data-caption="我在画乡很想你"/></div>
+        <div class="slide"><img src="34.jpg" alt="Slide 33" data-caption="画乡门户古樟"/></div>
+        <div class="slide"><img src="35.jpg" alt="Slide 34" data-caption="围栏内(可打卡📸)"/></div>
+        <div class="slide"><img src="36.jpg" alt="Slide 35" data-caption="古堰画乡手绘"/></div>
+        <div class="slide"><img src="37.jpg" alt="Slide 36" data-caption="猫猫！"/></div>
+        <div class="slide"><img src="38.jpg" alt="Slide 37" data-caption="画乡处logo"/></div>
+       
+
+        <!-- arrows -->
+        <div id="prev" class="nav-btn" aria-label="上一张">←</div>
+        <div id="next" class="nav-btn" aria-label="下一张">→</div>
+
+        <!-- dots -->
+        <div class="dots" id="dots"></div>
+
+        <!-- caption + buttons -->
+        <div class="overlay">
+          <div class="caption" id="caption"></div>
+          <div class="center-buttons">
+            <button class="ctrl-btn" id="playpause">▶️播放 (2s)</button>
+            <button class="ctrl-btn" id="fullscreen">🔲全屏</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const frame = document.getElementById('frame');
+    const slider = document.getElementById('slider');
+    const slides = Array.from(slider.querySelectorAll('.slide'));
+    const nextBtn = document.getElementById('next');
+    const prevBtn = document.getElementById('prev');
+    const dotsWrap = document.getElementById('dots');
+    const captionEl = document.getElementById('caption');
+    const playBtn = document.getElementById('playpause');
+    const fullBtn = document.getElementById('fullscreen');
+
+    // autoplay state
+    let auto = false;
+    const INTERVAL_MS = 2000;  // 2s
+    let slideInterval = null;
+
+    // idle-hide state
+    const IDLE_DELAY = 3000;   // 3s after no movement while playing
+    let idleTimer = null;
+
+    // dots
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i===0 ? ' active' : '');
+      d.dataset.index = i;
+      d.addEventListener('click', () => {
+        goTo(i, false);
+        userActivity();
+      });
+      dotsWrap.appendChild(d);
+    });
+
+    function currentIndex(){
+      return slides.findIndex(s => s.classList.contains('current'));
+    }
+
+    function setCaption(i){
+      captionEl.textContent = slides[i].querySelector('img').dataset.caption || '';
+    }
+
+    function setDot(i){
+      dotsWrap.querySelectorAll('.dot').forEach((el, idx) => {
+        el.classList.toggle('active', idx === i);
+      });
+    }
+
+    function goTo(i, restart){
+      const cur = slider.querySelector('.slide.current');
+      if (cur) cur.classList.remove('current');
+      slides[i].classList.add('current');
+      setDot(i);
+      setCaption(i);
+
+      if (restart && auto){
+        stopAuto();
+        startAuto();
+      }
+    }
+
+    function nextSlide(){
+      goTo((currentIndex() + 1) % slides.length, false);
+    }
+
+    function prevSlide(){
+      goTo((currentIndex() - 1 + slides.length) % slides.length, false);
+    }
+
+    // --- autoplay / idle hide ---
+    function startIdleTimer(){
+      clearTimeout(idleTimer);
+      slider.classList.remove('idle'); // show UI right now
+      idleTimer = setTimeout(() => {
+        if (auto){
+          slider.classList.add('idle'); // hide UI after delay
+        }
+      }, IDLE_DELAY);
+    }
+
+    function startAuto(){
+      if (!slideInterval){
+        slideInterval = setInterval(nextSlide, INTERVAL_MS);
+      }
+      slider.classList.add('playing');
+      startIdleTimer();
+    }
+
+    function stopAuto(){
+      clearInterval(slideInterval);
+      slideInterval = null;
+      slider.classList.remove('playing','idle');
+      clearTimeout(idleTimer);
+    }
+
+    function toggleAuto(){
+      auto = !auto;
+      playBtn.textContent = auto ? '⏸️暂停' : '▶️播放 (2s)';
+      if (auto){
+        startAuto();
+      } else {
+        stopAuto();
+      }
+    }
+
+    function userActivity(){
+      // reset idle timer ONLY if currently auto-playing
+      if (auto){
+        startIdleTimer();
+      }
+    }
+
+    // --- controls ---
+    playBtn.addEventListener('click', () => {
+      toggleAuto();
+      userActivity();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      nextSlide();
+      if (auto){
+        // keep autoplay smooth (reset interval timing)
+        stopAuto();
+        startAuto();
+      }
+      userActivity();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      prevSlide();
+      if (auto){
+        stopAuto();
+        startAuto();
+      }
+      userActivity();
+    });
+
+    // if tab becomes hidden, pause autoplay
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden){
+        stopAuto();
+      } else if (auto){
+        startAuto();
+      }
+    });
+
+    // fullscreen behavior with Notion fallback
+    fullBtn.addEventListener('click', () => {
+      const el = frame;
+      let fullscreenAttempted = false;
+
+      try {
+        if (el.requestFullscreen){
+          el.requestFullscreen();
+          fullscreenAttempted = true;
+        } else if (el.webkitRequestFullscreen){
+          el.webkitRequestFullscreen();
+          fullscreenAttempted = true;
+        } else if (el.msRequestFullscreen){
+          el.msRequestFullscreen();
+          fullscreenAttempted = true;
+        }
+      } catch (err){
+        fullscreenAttempted = false;
+      }
+
+      // If we couldn't request fullscreen (common inside Notion),
+      // open the widget URL in a new tab instead so the user
+      // can view it full page.
+      if (!fullscreenAttempted){
+        const win = window.open(window.location.href, '_blank');
+        if (!win){
+          alert('无法全屏，浏览器/Notion 阻止了这一操作。请允许弹出窗口或直接在新标签中打开此页面。');
+        }
+      }
+
+      userActivity();
+    });
+
+    // keyboard navigation
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight'){
+        nextSlide();
+        if (auto){ stopAuto(); startAuto(); }
+        userActivity();
+      } else if (e.key === 'ArrowLeft'){
+        prevSlide();
+        if (auto){ stopAuto(); startAuto(); }
+        userActivity();
+      } else if (e.code === 'Space'){
+        e.preventDefault();
+        toggleAuto();
+        userActivity();
+      } else {
+        userActivity();
+      }
+    });
+
+    // swipe navigation (mobile)
+    let startX = null;
+    slider.addEventListener('touchstart', e => {
+      if (e.touches.length === 1){
+        startX = e.touches[0].clientX;
+      }
+      userActivity();
+    }, {passive: true});
+
+    slider.addEventListener('touchend', e => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 40){
+        if (dx < 0){
+          nextSlide();
+        } else {
+          prevSlide();
+        }
+        if (auto){
+          stopAuto();
+          startAuto();
+        }
+      }
+      startX = null;
+      userActivity();
+    });
+
+    // mouse / wheel / touchmove also count as activity
+    ['mousemove','mousedown','mouseup','wheel','touchmove']
+      .forEach(ev => frame.addEventListener(ev, userActivity, {passive:true}));
+
+    // init first slide
+    goTo(0,false);
+  })();
+  </script>
+</body>
+</html>
