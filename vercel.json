@@ -1,5 +1,8 @@
 {
-  "redirects": [
-    { "source": "/", "destination": "/forhtmlsave/" }
+  "builds": [
+    { "src": "docs/notion_widgets/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "docs/notion_widgets/$1" }
   ]
 }
