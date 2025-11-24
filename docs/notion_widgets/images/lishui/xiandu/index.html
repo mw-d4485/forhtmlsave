@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>📸相册集</title>
+  <style>
+    /* ---------- Base (Notion-friendly) ---------- */
+    html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+    .notion-widget-root{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+      display:flex;align-items:center;justify-content:center;background:transparent
+    }
+
+    /* ---------- Roland-Garros refined theme (Orange-Clay × Cream × Hint of Green) ---------- */
+    :root{
+      --clay:#d36b37;        /* brighter terracotta orange (noticeable on white) */
+      --clay-deep:#af481c;   /* deeper burnt orange for borders */
+      --leather:#d27245e9;     /* warm leather tone */
+      --cream:#f6f2ea;       /* silky canvas cream */
+      --ash:#d6d3ce;         /* soft gray (spare) */
+      --life:#88b978;        /* subtle moss-green accent */
+      --forest:#3b422b;      /* muted green-brown for text */
+    }
+
+    .frame{
+      position:relative;display:grid;grid-template-rows:auto 1fr;row-gap:8px;
+      /* Cream-dominant center, orange accents, faint green at edges */
+      background:
+        radial-gradient(1200px 700px at 15% 15%, rgba(136,185,120,.08), transparent 55%),
+        radial-gradient(900px 600px at 85% 85%, rgba(136,185,120,.06), transparent 60%),
+        linear-gradient(160deg,
+          var(--cream) 0%, #f2ece3 20%, #ecdcc7 32%, #e0b997 46%,
+          #d67b45 64%, var(--clay) 85%, var(--leather) 90%);
+      border:6px solid var(--clay-deep);           /* thinner outer border */
+      border-radius:14px;
+      max-width:95vw; padding:12px;
+      box-shadow:
+        0 10px 20px rgba(80,35,10,.28),
+        inset 0 0 0 1px rgba(255,255,255,.5);
+      overflow:hidden;
+    }
+
+    /* Title in forest tone with clay→green underline */
+    .frame-title{
+      color:var(--forest);
+      font-size:20px;font-weight:800;letter-spacing:.4px;text-align:left;
+      margin:2px 6px 0 6px;position:relative;
+    }
+    .frame-title::after{
+      content:"";position:absolute;left:6px;right:calc(100% - 140px);bottom:-6px;height:3px;
+      background:linear-gradient(90deg,var(--clay),var(--life));border-radius:2px;opacity:.9;
+    }
+
+    /* Stage */
+    .slider{
+      position:relative;width:min(100vw - 56px,980px);height:min(80vh,720px);
+      background:#000;border-radius:12px;overflow:hidden;transition:opacity .25s;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .slide{position:absolute;inset:0;opacity:0;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease-in-out}
+    .slide.current{opacity:1}
+    .slide img{width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+
+    /* Arrows: cream ring; clay hover */
+    .nav-btn{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:54px;height:54px;border-radius:50%;
+      border:2px solid var(--cream);background:rgba(0,0,0,.38);color:var(--cream);
+      font-size:26px;line-height:50px;text-align:center;cursor:pointer;z-index:3;
+      transition:background .2s,color .2s,border-color .2s,transform .05s;
+      box-shadow:0 2px 8px rgba(0,0,0,.45);
+    }
+    .nav-btn:hover{background:var(--cream);color:#000;border-color:var(--clay)}
+    .nav-btn:active{transform:translateY(-50%) scale(.98)}
+    #prev{left:14px} #next{right:14px}
+
+    /* Dots bar */
+    .dots{
+      position:absolute;top:12px;left:50%;transform:translateX(-50%);
+      display:flex;gap:8px;background:rgba(214,123,69,.55); /* soft clay */
+      border:1px solid rgba(255,255,255,.45);border-radius:12px;padding:6px 10px;z-index:4;
+      box-shadow:0 3px 8px rgba(0,0,0,.35);transition:opacity .25s;
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--cream);cursor:pointer;transition:transform .15s,background .15s,box-shadow .15s}
+    .dot.active{background:var(--clay);box-shadow:0 0 0 3px rgba(136,185,120,.45);transform:scale(1.2)}
+
+    /* Caption + buttons */
+    .overlay{
+      position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+      display:grid;gap:10px;justify-items:center;z-index:4;width:calc(100% - 32px);
+      pointer-events:none;transition:opacity .25s;
+    }
+    .caption{
+      max-width:90%;padding:10px 14px;font-size:18px;font-weight:800;letter-spacing:.2px;
+      color:#fffdf8;text-align:center;background:rgba(182,90,46,.83);
+      border:2px solid rgba(246,242,234,.95);border-radius:12px;box-shadow:0 6px 14px rgba(0,0,0,.45);
+      pointer-events:auto;
+    }
+
+    .center-buttons{display:flex;gap:10px;pointer-events:auto}
+    .ctrl-btn{
+      position:relative;
+      background:linear-gradient(180deg,#faf7f1 0%,#f2ede4 55%,#e9dece 100%);
+      color:#3d2c1f;border:1px solid #c9a88e;border-radius:12px;
+      padding:9px 14px;font-size:16px;font-weight:800;cursor:pointer;
+      box-shadow:0 1px 3px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.5);
+      transition:transform .05s,border-color .15s,box-shadow .15s;
+    }
+    .ctrl-btn:hover{border-color:var(--clay);box-shadow:0 2px 6px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.6)}
+    .ctrl-btn:active{transform:scale(.98)}
+    .ctrl-btn::after{
+      content:"";position:absolute;left:8px;top:7px;bottom:7px;width:4px;
+      background:linear-gradient(180deg,var(--clay),var(--life));border-radius:3px;opacity:.8;
+    }
+
+    /* Fullscreen layout */
+    .frame:fullscreen,.frame:-webkit-full-screen{
+      width:100vw;height:100vh;max-width:100vw;max-height:100vh;padding:12px;border-radius:0;
+      grid-template-rows:auto 1fr;row-gap:8px;overflow:hidden;
+    }
+    .frame:fullscreen .slider,.frame:-webkit-full-screen .slider{width:100%;height:100%;border-radius:12px}
+    .frame:fullscreen .dots,.frame:-webkit-full-screen .dots{top:56px}
+
+    /* Hide controls only when playing AND idle */
+    .slider.playing.idle .overlay,
+    .slider.playing.idle .nav-btn,
+    .slider.playing.idle .dots{opacity:0;pointer-events:none}
+
+    @media (max-width:768px){
+      .slider{width:90vw;height:70vh}
+      .caption{font-size:16px}
+      .ctrl-btn{font-size:15px}
+      .frame-title{font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="notion-widget-root">
+    <div class="frame" id="frame">
+      <!-- You can change this title per trip album -->
+      <div class="frame-title">📸此景点照片:</div>
+
+      <div class="slider" id="slider" aria-live="polite">
+        <!-- Replace these with your travel photos -->
+        <div class="slide current"><img src="1.jpg" alt="Slide 1" data-caption="<仙都景区>全景图"/></div>
+        <div class="slide"><img src="2.jpg" alt="Slide 2" data-caption="<鼎湖峰>导览图"/></div>
+        <div class="slide"><img src="3.jpg" alt="Slide 3" data-caption="<缙云轩辕祭奠>石碑"/></div>
+        <div class="slide"><img src="4.jpg" alt="Slide 4" data-caption="「向星辰许愿💫，在仙都相见🎊」"/></div>
+        <div class="slide"><img src="5.jpg" alt="Slide 5" data-caption="<国家重点风景名胜区>石碑"/></div>
+        <div class="slide"><img src="6.jpg" alt="Slide 6" data-caption="《纳福》🧧"/></div>
+        <div class="slide"><img src="7.jpg" alt="Slide 7" data-caption="《仙都》🧚🏻‍♀️🧚‍♀️"/></div>
+        <div class="slide"><img src="8.jpg" alt="Slide 8" data-caption="<鼎湖峰>牌坊"/></div>
+        <div class="slide"><img src="9.jpg" alt="Slide 9" data-caption="<千鹦鸟舍>摊位"/></div>
+        <div class="slide"><img src="10.jpg" alt="Slide 10" data-caption="大道~"/></div>
+        <div class="slide"><img src="11.jpg" alt="Slide 11" data-caption="鼎湖峰·远景"/></div>
+        <div class="slide"><img src="12.jpg" alt="Slide 12" data-caption="鼎湖峰·人间仙都"/></div>
+        <div class="slide"><img src="13.jpg" alt="Slide 13" data-caption="鼎湖峰·简介"/></div>
+        <div class="slide"><img src="14.jpg" alt="Slide 14" data-caption="仰止亭"/></div>
+        <div class="slide"><img src="15.jpg" alt="Slide 15" data-caption="鼎湖峰·牛的 ദ്ദി(˶ᵔ ᵕ ᵔ˶) "/></div>
+        <div class="slide"><img src="16.jpg" alt="Slide 16" data-caption="黄帝祠宇·简介"/></div>
+        <div class="slide"><img src="17.jpg" alt="Slide 17" data-caption="驭龍亭"/></div>
+        <div class="slide"><img src="18.jpg" alt="Slide 18" data-caption="锦鲤🫧龍影亭"/></div>
+        <div class="slide"><img src="19.jpg" alt="Slide 19" data-caption="黄帝祠宇·正门🙏"/></div>
+        <div class="slide"><img src="20.jpg" alt="Slide 20" data-caption="《轩辕赞》"/></div>
+        <div class="slide"><img src="21.jpg" alt="Slide 21" data-caption="天下第一祠·轩辕殿"/></div>
+        <div class="slide"><img src="22.jpg" alt="Slide 22" data-caption="龙纹鼓面"/></div>
+        <div class="slide"><img src="23.jpg" alt="Slide 23" data-caption="《龙举云兴》"/></div>
+        <div class="slide"><img src="24.jpg" alt="Slide 24" data-caption="缙云堂"/></div>
+        <div class="slide"><img src="25.jpg" alt="Slide 25" data-caption="轩辕黄帝升平巡天图 "/></div>
+        <div class="slide"><img src="26.jpg" alt="Slide 26" data-caption="《五雲腾歸》"/></div>
+        <div class="slide"><img src="27.jpg" alt="Slide 27" data-caption="《浩气光華》"/></div>
+        <div class="slide"><img src="28.jpg" alt="Slide 28" data-caption="《凌雲摩天》"/></div>
+        <div class="slide"><img src="29.jpg" alt="Slide 29" data-caption="怀祖堂🧙‍♂️🧙🏼‍♀️"/></div>
+        <div class="slide"><img src="30.jpg" alt="Slide 30" data-caption="姓氏树🌳"/></div>
+        <div class="slide"><img src="31.jpg" alt="Slide 31" data-caption="《黄帝爱情办事处》👩🏻‍❤️‍👨🏻"/></div>
+        <div class="slide"><img src="32.jpg" alt="Slide 32" data-caption="轩辕洞·石雕"/></div>
+        <div class="slide"><img src="33.jpg" alt="Slide 33" data-caption="《黄帝活动范围》"/></div>
+        <div class="slide"><img src="34.jpg" alt="Slide 34" data-caption="轩辕洞·文物陈列"/></div>
+        <div class="slide"><img src="35.jpg" alt="Slide 35" data-caption="仙都观·导览图"/></div>
+        <div class="slide"><img src="36.jpg" alt="Slide 36" data-caption="<仙都观景区>正门"/></div>
+        <div class="slide"><img src="37.jpg" alt="Slide 37" data-caption="石隙"/></div>
+        <div class="slide"><img src="38.jpg" alt="Slide 38" data-caption="重见光明~"/></div>
+        <div class="slide"><img src="39.jpg" alt="Slide 39" data-caption="無有间"/></div>
+        <div class="slide"><img src="40.jpg" alt="Slide 40" data-caption="「仙都观」☯ "/></div>
+        <div class="slide"><img src="41.jpg" alt="Slide 41" data-caption="<仙都观>路牌"/></div>
+        <div class="slide"><img src="42.jpg" alt="Slide 42" data-caption="招隐洞"/></div>
+        <div class="slide"><img src="43.jpg" alt="Slide 43" data-caption="招隐洞·全景"/></div>
+        <div class="slide"><img src="44.jpg" alt="Slide 44" data-caption="梯云洞"/></div>
+        <div class="slide"><img src="45.jpg" alt="Slide 45" data-caption="<天鹅孵卵>景点简介"/></div>
+        <div class="slide"><img src="46.jpg" alt="Slide 46" data-caption="📸出片点·<不可说>牌坊阶梯下 (工具人示例1)"/></div>
+        <div class="slide"><img src="47.jpg" alt="Slide 47" data-caption="📸出片点·<不可说>牌坊阶梯下 (工具人示例2)"/></div>
+        <div class="slide"><img src="48.jpg" alt="Slide 48" data-caption="赵候船"/></div>
+        <div class="slide"><img src="49.jpg" alt="Slide 49" data-caption="《仙都观》题字"/></div>
+        <div class="slide"><img src="50.jpg" alt="Slide 50" data-caption="「小赤壁」简介 "/></div>
+        <div class="slide"><img src="51.jpg" alt="Slide 51" data-caption="会仙亭"/></div>
+        <div class="slide"><img src="52.jpg" alt="Slide 52" data-caption="亭边溪景"/></div>
+        <div class="slide"><img src="53.jpg" alt="Slide 53" data-caption="「雲关」"/></div>
+        <div class="slide"><img src="54.jpg" alt="Slide 54" data-caption="轩辕桥"/></div>
+        <div class="slide"><img src="55.jpg" alt="Slide 55" data-caption="涟漪~"/></div>
+        <div class="slide"><img src="56.jpg" alt="Slide 56" data-caption="八仙亭"/></div>
+        <div class="slide"><img src="57.jpg" alt="Slide 57" data-caption="亭边倒影"/></div>
+        <div class="slide"><img src="58.jpg" alt="Slide 58" data-caption="小赤壁·题字"/></div>
+        <div class="slide"><img src="59.jpg" alt="Slide 59" data-caption="小赤壁·全景"/></div>
+        <div class="slide"><img src="60.jpg" alt="Slide 60" data-caption="小赤壁·侧景 "/></div>
+        <div class="slide"><img src="61.jpg" alt="Slide 61" data-caption="小赤壁·景区导览图"/></div>
+        <div class="slide"><img src="62.jpg" alt="Slide 62" data-caption="<小蓬莱>简介"/></div>
+        <div class="slide"><img src="63.jpg" alt="Slide 63" data-caption="还不曾到过那<仙都山>🗡"/></div>
+        <div class="slide"><img src="64.jpg" alt="Slide 64" data-caption="济川桥"/></div>
+        <div class="slide"><img src="64.jpg" alt="Slide 64" data-caption="桥畔溪景🪞"/></div>
+
+        <!-- arrows -->
+        <div id="prev" class="nav-btn" aria-label="上一张">←</div>
+        <div id="next" class="nav-btn" aria-label="下一张">→</div>
+
+        <!-- dots -->
+        <div class="dots" id="dots"></div>
+
+        <!-- caption + buttons -->
+        <div class="overlay">
+          <div class="caption" id="caption"></div>
+          <div class="center-buttons">
+            <button class="ctrl-btn" id="playpause">▶️播放 (2s)</button>
+            <button class="ctrl-btn" id="fullscreen">🔲全屏</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const frame = document.getElementById('frame');
+    const slider = document.getElementById('slider');
+    const slides = Array.from(slider.querySelectorAll('.slide'));
+    const nextBtn = document.getElementById('next');
+    const prevBtn = document.getElementById('prev');
+    const dotsWrap = document.getElementById('dots');
+    const captionEl = document.getElementById('caption');
+    const playBtn = document.getElementById('playpause');
+    const fullBtn = document.getElementById('fullscreen');
+
+    // autoplay state
+    let auto = false;
+    const INTERVAL_MS = 2000;  // 2s
+    let slideInterval = null;
+
+    // idle-hide state
+    const IDLE_DELAY = 3000;   // 3s after no movement while playing
+    let idleTimer = null;
+
+    // dots
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i===0 ? ' active' : '');
+      d.dataset.index = i;
+      d.addEventListener('click', () => {
+        goTo(i, false);
+        userActivity();
+      });
+      dotsWrap.appendChild(d);
+    });
+
+    function currentIndex(){
+      return slides.findIndex(s => s.classList.contains('current'));
+    }
+
+    function setCaption(i){
+      captionEl.textContent = slides[i].querySelector('img').dataset.caption || '';
+    }
+
+    function setDot(i){
+      dotsWrap.querySelectorAll('.dot').forEach((el, idx) => {
+        el.classList.toggle('active', idx === i);
+      });
+    }
+
+    function goTo(i, restart){
+      const cur = slider.querySelector('.slide.current');
+      if (cur) cur.classList.remove('current');
+      slides[i].classList.add('current');
+      setDot(i);
+      setCaption(i);
+
+      if (restart && auto){
+        stopAuto();
+        startAuto();
+      }
+    }
+
+    function nextSlide(){
+      goTo((currentIndex() + 1) % slides.length, false);
+    }
+
+    function prevSlide(){
+      goTo((currentIndex() - 1 + slides.length) % slides.length, false);
+    }
+
+    // --- autoplay / idle hide ---
+    function startIdleTimer(){
+      clearTimeout(idleTimer);
+      slider.classList.remove('idle'); // show UI right now
+      idleTimer = setTimeout(() => {
+        if (auto){
+          slider.classList.add('idle'); // hide UI after delay
+        }
+      }, IDLE_DELAY);
+    }
+
+    function startAuto(){
+      if (!slideInterval){
+        slideInterval = setInterval(nextSlide, INTERVAL_MS);
+      }
+      slider.classList.add('playing');
+      startIdleTimer();
+    }
+
+    function stopAuto(){
+      clearInterval(slideInterval);
+      slideInterval = null;
+      slider.classList.remove('playing','idle');
+      clearTimeout(idleTimer);
+    }
+
+    function toggleAuto(){
+      auto = !auto;
+      playBtn.textContent = auto ? '⏸️暂停' : '▶️播放 (2s)';
+      if (auto){
+        startAuto();
+      } else {
+        stopAuto();
+      }
+    }
+
+    function userActivity(){
+      // reset idle timer ONLY if currently auto-playing
+      if (auto){
+        startIdleTimer();
+      }
+    }
+
+    // --- controls ---
+    playBtn.addEventListener('click', () => {
+      toggleAuto();
+      userActivity();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      nextSlide();
+      if (auto){
+        // keep autoplay smooth (reset interval timing)
+        stopAuto();
+        startAuto();
+      }
+      userActivity();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      prevSlide();
+      if (auto){
+        stopAuto();
+        startAuto();
+      }
+      userActivity();
+    });
+
+    // if tab becomes hidden, pause autoplay
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden){
+        stopAuto();
+      } else if (auto){
+        startAuto();
+      }
+    });
+
+    // fullscreen behavior with Notion fallback
+    fullBtn.addEventListener('click', () => {
+      const el = frame;
+      let fullscreenAttempted = false;
+
+      try {
+        if (el.requestFullscreen){
+          el.requestFullscreen();
+          fullscreenAttempted = true;
+        } else if (el.webkitRequestFullscreen){
+          el.webkitRequestFullscreen();
+          fullscreenAttempted = true;
+        } else if (el.msRequestFullscreen){
+          el.msRequestFullscreen();
+          fullscreenAttempted = true;
+        }
+      } catch (err){
+        fullscreenAttempted = false;
+      }
+
+      // If we couldn't request fullscreen (common inside Notion),
+      // open the widget URL in a new tab instead so the user
+      // can view it full page.
+      if (!fullscreenAttempted){
+        const win = window.open(window.location.href, '_blank');
+        if (!win){
+          alert('无法全屏，浏览器/Notion 阻止了这一操作。请允许弹出窗口或直接在新标签中打开此页面。');
+        }
+      }
+
+      userActivity();
+    });
+
+    // keyboard navigation
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight'){
+        nextSlide();
+        if (auto){ stopAuto(); startAuto(); }
+        userActivity();
+      } else if (e.key === 'ArrowLeft'){
+        prevSlide();
+        if (auto){ stopAuto(); startAuto(); }
+        userActivity();
+      } else if (e.code === 'Space'){
+        e.preventDefault();
+        toggleAuto();
+        userActivity();
+      } else {
+        userActivity();
+      }
+    });
+
+    // swipe navigation (mobile)
+    let startX = null;
+    slider.addEventListener('touchstart', e => {
+      if (e.touches.length === 1){
+        startX = e.touches[0].clientX;
+      }
+      userActivity();
+    }, {passive: true});
+
+    slider.addEventListener('touchend', e => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 40){
+        if (dx < 0){
+          nextSlide();
+        } else {
+          prevSlide();
+        }
+        if (auto){
+          stopAuto();
+          startAuto();
+        }
+      }
+      startX = null;
+      userActivity();
+    });
+
+    // mouse / wheel / touchmove also count as activity
+    ['mousemove','mousedown','mouseup','wheel','touchmove']
+      .forEach(ev => frame.addEventListener(ev, userActivity, {passive:true}));
+
+    // init first slide
+    goTo(0,false);
+  })();
+  </script>
+</body>
+</html>
